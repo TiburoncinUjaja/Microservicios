@@ -1,0 +1,39 @@
+version: '3.8'
+
+services:
+  reservas-service:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      - DB_HOST=db
+      - DB_PORT=3306
+      - DB_USER=root
+      - DB_PASSWORD=root
+      - DB_NAME=reservas_db
+      - VUELOS_SERVICE_URL=http://vuelos-service:8000/api/v1
+      - SECRET_KEY=your-secret-key-here
+      - DEBUG=True
+    depends_on:
+      - db
+    networks:
+      - airline-network
+
+  db:
+    image: mysql:8.0
+    environment:
+      - MYSQL_ROOT_PASSWORD=root
+      - MYSQL_DATABASE=reservas_db
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql-data:/var/lib/mysql
+    networks:
+      - airline-network
+
+networks:
+  airline-network:
+    external: true
+
+volumes:
+  mysql-data: 

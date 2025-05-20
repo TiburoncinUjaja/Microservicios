@@ -1,0 +1,12 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  - job_name: 'pasajeros-service'
+    static_configs:
+      - targets: ['pasajeros-service:8000']
+
+  - job_name: 'reservas-service'
+    static_configs:
+      - targets: ['reservas-service:8000'] 

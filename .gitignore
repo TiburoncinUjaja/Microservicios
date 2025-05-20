@@ -1,0 +1,18 @@
+# Environment variables
+.env
+
+# Python virtual environment
+.venv/
+venv/
+__pycache__/
+*.pyc
+
+# IDE files
+.vscode/
+.idea/
+
+# Logs
+*.log
+
+# Local development
+.DS_Store 
