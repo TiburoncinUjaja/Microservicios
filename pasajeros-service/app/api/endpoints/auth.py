@@ -7,7 +7,8 @@ from ...core.security import (
     create_access_token,
     get_current_user,
     Role,
-    check_permissions
+    check_permissions,
+    generate_test_hash
 )
 from ...core.config import settings
 from ...core.logger import logger
@@ -24,6 +25,21 @@ class Token(BaseModel):
 class TokenData(BaseModel):
     username: str
     role: str
+
+class PasswordHash(BaseModel):
+    password: str
+    hash: str
+
+class PasswordRequest(BaseModel):
+    password: str
+
+@router.post("/generate-hash", response_model=PasswordHash)
+async def generate_hash(request: PasswordRequest):
+    """
+    Genera un hash para la contraseña proporcionada.
+    """
+    hash = generate_test_hash(request.password)
+    return {"password": request.password, "hash": hash}
 
 @router.post("/token", response_model=Token)
 async def login_for_access_token(

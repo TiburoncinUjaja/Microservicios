@@ -8,7 +8,8 @@ from ...core.exceptions import (
     PasajeroNotFoundException,
     PasajeroDuplicadoException,
     DatabaseException,
-    ValidationException
+    ValidationException,
+    UsuarioNotFoundException
 )
 from ...core.logger import logger
 
@@ -25,6 +26,12 @@ async def create_pasajero(pasajero: PasajeroCreate, db: Session = Depends(get_db
         logger.warning(f"Intento de crear pasajero duplicado: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
+            detail=str(e)
+        )
+    except UsuarioNotFoundException as e:
+        logger.warning(f"Usuario no encontrado al crear pasajero: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
             detail=str(e)
         )
     except ValidationException as e:

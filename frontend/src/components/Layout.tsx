@@ -1,0 +1,1 @@
+// Este archivo ha sido limpiado para una nueva implementación de layout con menú lateral. 

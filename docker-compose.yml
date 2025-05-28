@@ -5,12 +5,12 @@ services:
   mysql:
     image: mysql:8.0
     environment:
-      - MYSQL_ROOT_PASSWORD=root
-      - MYSQL_MULTIPLE_DATABASES=airline_pasajeros,airline_reservas
+      - MYSQL_ROOT_PASSWORD=1092
+      - MYSQL_MULTIPLE_DATABASES=airline_pasajeros,airline_reservas,airline_vuelos,airline_aviones,airline_aeropuertos,airline_escalas
     ports:
       - "3307:3306"
     volumes:
-      - mysql_data:/var/lib/mysql
+      - ./mysql-data:/var/lib/mysql
       - ./mysql-init:/docker-entrypoint-initdb.d
     networks:
       - airline-network
@@ -19,7 +19,7 @@ services:
       interval: 5s
       timeout: 5s
       retries: 20
-    command: --default-authentication-plugin=mysql_native_password
+    command: --default-authentication-plugin=mysql_native_password --datadir=/var/lib/mysql
 
   # Redis para caché
   redis:
@@ -53,13 +53,50 @@ services:
       timeout: 5s
       retries: 20
 
+  # Servicio de Aviones
+  aviones-service:
+    build: ./aviones-service
+    ports:
+      - "8004:8004"
+    environment:
+      - MYSQL_USER=root
+      - MYSQL_PASSWORD=1092
+      - MYSQL_HOST=mysql
+      - MYSQL_PORT=3306
+      - MYSQL_DATABASE=airline_aviones
+      - RABBITMQ_USER=guest
+      - RABBITMQ_PASSWORD=guest
+      - RABBITMQ_HOST=rabbitmq
+      - RABBITMQ_PORT=5672
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - SECRET_KEY=tu_clave_secreta_muy_segura
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - airline-network
+    command: >
+      /bin/sh -c "
+      echo 'Waiting for MySQL to be ready...' &&
+      while ! nc -z mysql 3306; do
+        sleep 1
+      done &&
+      echo 'MySQL is ready!' &&
+      python -m app.main
+      "
+
   # Servicio de Pasajeros
   pasajeros-service:
     build: ./pasajeros-service
     ports:
       - "8001:8001"
     environment:
-      - DATABASE_URL=mysql://root:root@mysql:3306/airline_pasajeros
+      - DATABASE_URL=mysql://root:1092@mysql:3306/airline_pasajeros
       - REDIS_URL=redis://redis:6379/0
       - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672/
       - SERVICE_PORT=8001
@@ -100,7 +137,7 @@ services:
       - DEBUG=true
       - LOG_LEVEL=INFO
       - LOG_FORMAT=%(asctime)s - %(name)s - %(levelname)s - %(message)s
-      - DATABASE_URL=mysql://root:root@mysql:3306/airline_reservas
+      - DATABASE_URL=mysql://root:1092@mysql:3306/airline_reservas
       - REDIS_URL=redis://redis:6379/0
       - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672/
       - PASAJEROS_SERVICE_URL=http://pasajeros-service:8001
@@ -118,6 +155,106 @@ services:
       rabbitmq:
         condition: service_healthy
       pasajeros-service:
+        condition: service_started
+    networks:
+      - airline-network
+    command: >
+      /bin/sh -c "
+      echo 'Waiting for MySQL to be ready...' &&
+      while ! nc -z mysql 3306; do
+        sleep 1
+      done &&
+      echo 'MySQL is ready!' &&
+      python -m app.main
+      "
+
+  # Servicio de Vuelos
+  vuelos-service:
+    build: ./vuelos-service
+    ports:
+      - "8003:8003"
+    environment:
+      - MYSQL_HOST=mysql
+      - MYSQL_PORT=3306
+      - MYSQL_USER=root
+      - MYSQL_PASSWORD=1092
+      - MYSQL_DATABASE=airline_vuelos
+      - SERVICE_PORT=8003
+      - SERVICE_HOST=0.0.0.0
+      - DEBUG=true
+    depends_on:
+      mysql:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_started
+    networks:
+      - airline-network
+    command: >
+      /bin/sh -c "
+      echo 'Waiting for MySQL to be ready...' &&
+      while ! nc -z mysql 3306; do
+        sleep 1
+      done &&
+      echo 'MySQL is ready!' &&
+      python -m app.main
+      "
+
+  # Servicio de Aeropuertos
+  aeropuertos-service:
+    build: ./aeropuertos-service
+    ports:
+      - "8005:8005"
+    environment:
+      - MYSQL_HOST=mysql
+      - MYSQL_PORT=3306
+      - MYSQL_USER=root
+      - MYSQL_PASSWORD=1092
+      - MYSQL_DATABASE=airline_aeropuertos
+    depends_on:
+      - mysql
+    networks:
+      - airline-network
+
+  # Servicio de Escalas
+  escalas-service:
+    build: ./escalas-service
+    ports:
+      - "8006:8006"
+    environment:
+      - APP_NAME=Escalas Service
+      - VERSION=1.0.0
+      - API_PREFIX=/api/v1
+      - DEBUG=true
+      - LOG_LEVEL=INFO
+      - LOG_FORMAT=%(asctime)s - %(name)s - %(levelname)s - %(message)s
+      - MYSQL_HOST=mysql
+      - MYSQL_PORT=3306
+      - MYSQL_USER=root
+      - MYSQL_PASSWORD=1092
+      - MYSQL_DATABASE=airline_escalas
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - RABBITMQ_HOST=rabbitmq
+      - RABBITMQ_PORT=5672
+      - RABBITMQ_USER=guest
+      - RABBITMQ_PASSWORD=guest
+      - VUELOS_SERVICE_URL=http://vuelos-service:8003
+      - AEROPUERTOS_SERVICE_URL=http://aeropuertos-service:8005
+      - SERVICE_PORT=8006
+      - SERVICE_HOST=0.0.0.0
+      - SECRET_KEY=tu_clave_secreta_muy_segura
+      - ALGORITHM=HS256
+      - ACCESS_TOKEN_EXPIRE_MINUTES=30
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      vuelos-service:
+        condition: service_started
+      aeropuertos-service:
         condition: service_started
     networks:
       - airline-network

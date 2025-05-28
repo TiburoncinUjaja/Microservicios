@@ -55,5 +55,5 @@ CREATE TABLE IF NOT EXISTS historial_vuelos (
 
 -- Insertar usuario administrador por defecto
 INSERT INTO usuarios (email, password_hash, nombre, apellido, rol)
-VALUES ('admin@airline.com', '$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LewYpR1IOBYyGqK8y', 'Admin', 'Sistema', 'admin')
+VALUES ('admin@airline.com', '$2b$12$EixZaYVK1fsbw1ZfbX3OXePaWxn96p36WQoeG6Lruj3vjPGga31lW', 'Admin', 'Sistema', 'admin')
 ON DUPLICATE KEY UPDATE id=id; 

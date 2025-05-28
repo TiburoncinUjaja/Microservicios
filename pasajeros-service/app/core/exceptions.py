@@ -37,12 +37,12 @@ class PasajeroNotFoundException(BaseAPIException):
 class PasajeroDuplicadoException(BaseAPIException):
     def __init__(
         self,
-        numero_pasaporte: str,
+        numero_documento: str,
         headers: Optional[Dict[str, str]] = None
     ) -> None:
         super().__init__(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Ya existe un pasajero con el número de pasaporte {numero_pasaporte}",
+            detail=f"Ya existe un pasajero con el número de documento {numero_documento}",
             headers=headers
         )
 
@@ -69,4 +69,9 @@ class ExternalServiceException(BaseAPIException):
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail=f"Error en el servicio {service_name}: {detail}",
             headers=headers
-        ) 
+        )
+
+class UsuarioNotFoundException(Exception):
+    def __init__(self, usuario_id: int):
+        self.usuario_id = usuario_id
+        super().__init__(f"Usuario no encontrado con ID: {usuario_id}") 

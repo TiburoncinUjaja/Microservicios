@@ -20,6 +20,12 @@ def get_password_hash(password: str) -> str:
     """Genera un hash de la contraseña."""
     return pwd_context.hash(password)
 
+def generate_test_hash(password: str) -> str:
+    """Genera un hash de prueba para la contraseña."""
+    test_hash = pwd_context.hash(password)
+    logger.info(f"Hash generado para '{password}': {test_hash}")
+    return test_hash
+
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
     """Crea un token JWT."""
     to_encode = data.copy()

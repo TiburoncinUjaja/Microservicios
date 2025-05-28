@@ -5,10 +5,10 @@ import enum
 from app.core.database import Base
 
 class EstadoReserva(str, enum.Enum):
-    PENDIENTE = "pendiente"
-    CONFIRMADA = "confirmada"
-    CANCELADA = "cancelada"
-    COMPLETADA = "completada"
+    PENDIENTE = "PENDIENTE"
+    CONFIRMADA = "CONFIRMADA"
+    CANCELADA = "CANCELADA"
+    COMPLETADA = "COMPLETADA"
 
 class Reserva(Base):
     __tablename__ = "reservas"

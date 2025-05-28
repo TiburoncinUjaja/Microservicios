@@ -1,11 +1,13 @@
 from sqlalchemy.orm import Session
 from ..models.pasajero import Pasajero
+from ..models.usuario import Usuario
 from ..schemas.pasajero import PasajeroCreate, PasajeroUpdate
 from typing import List, Optional
 from ..core.exceptions import (
     PasajeroNotFoundException,
     PasajeroDuplicadoException,
-    DatabaseException
+    DatabaseException,
+    UsuarioNotFoundException
 )
 from ..core.logger import logger
 from ..core.events import EventTypes, publish_pasajero_event
@@ -25,11 +27,11 @@ class PasajeroService:
             raise DatabaseException(str(e))
 
     @staticmethod
-    def get_pasajero_by_pasaporte(db: Session, numero_pasaporte: str) -> Optional[Pasajero]:
+    def get_pasajero_by_documento(db: Session, numero_documento: str) -> Optional[Pasajero]:
         try:
-            return db.query(Pasajero).filter(Pasajero.numero_pasaporte == numero_pasaporte).first()
+            return db.query(Pasajero).filter(Pasajero.numero_documento == numero_documento).first()
         except SQLAlchemyError as e:
-            logger.error(f"Error de base de datos al buscar pasajero con pasaporte {numero_pasaporte}: {str(e)}")
+            logger.error(f"Error de base de datos al buscar pasajero con documento {numero_documento}: {str(e)}")
             raise DatabaseException(str(e))
 
     @staticmethod
@@ -45,11 +47,17 @@ class PasajeroService:
     @staticmethod
     async def create_pasajero(db: Session, pasajero: PasajeroCreate) -> Pasajero:
         try:
-            # Verificar si ya existe un pasajero con el mismo número de pasaporte
-            db_pasajero = PasajeroService.get_pasajero_by_pasaporte(db, pasajero.numero_pasaporte)
+            # Verificar si el usuario existe
+            usuario = db.query(Usuario).filter(Usuario.id == pasajero.usuario_id).first()
+            if not usuario:
+                logger.warning(f"Usuario no encontrado con ID: {pasajero.usuario_id}")
+                raise UsuarioNotFoundException(pasajero.usuario_id)
+
+            # Verificar si ya existe un pasajero con el mismo número de documento
+            db_pasajero = PasajeroService.get_pasajero_by_documento(db, pasajero.numero_documento)
             if db_pasajero:
-                logger.warning(f"Intento de crear pasajero con pasaporte duplicado: {pasajero.numero_pasaporte}")
-                raise PasajeroDuplicadoException(pasajero.numero_pasaporte)
+                logger.warning(f"Intento de crear pasajero con documento duplicado: {pasajero.numero_documento}")
+                raise PasajeroDuplicadoException(pasajero.numero_documento)
             
             # Crear nuevo pasajero
             db_pasajero = Pasajero(**pasajero.model_dump())
@@ -62,10 +70,10 @@ class PasajeroService:
                 EventTypes.PASAJERO_CREADO,
                 {
                     "id": db_pasajero.id,
-                    "nombre": db_pasajero.nombre,
-                    "apellido": db_pasajero.apellido,
-                    "numero_pasaporte": db_pasajero.numero_pasaporte,
-                    "email": db_pasajero.email
+                    "tipo_documento": db_pasajero.tipo_documento,
+                    "numero_documento": db_pasajero.numero_documento,
+                    "nacionalidad": db_pasajero.nacionalidad,
+                    "usuario_id": db_pasajero.usuario_id
                 }
             )
             
@@ -81,20 +89,20 @@ class PasajeroService:
         try:
             db_pasajero = PasajeroService.get_pasajero(db, pasajero_id)
 
-            # Verificar si el nuevo número de pasaporte ya existe
-            if pasajero.numero_pasaporte and pasajero.numero_pasaporte != db_pasajero.numero_pasaporte:
-                existing_pasajero = PasajeroService.get_pasajero_by_pasaporte(db, pasajero.numero_pasaporte)
+            # Verificar si el nuevo número de documento ya existe
+            if pasajero.numero_documento and pasajero.numero_documento != db_pasajero.numero_documento:
+                existing_pasajero = PasajeroService.get_pasajero_by_documento(db, pasajero.numero_documento)
                 if existing_pasajero:
-                    logger.warning(f"Intento de actualizar pasajero {pasajero_id} con pasaporte duplicado: {pasajero.numero_pasaporte}")
-                    raise PasajeroDuplicadoException(pasajero.numero_pasaporte)
+                    logger.warning(f"Intento de actualizar pasajero {pasajero_id} con documento duplicado: {pasajero.numero_documento}")
+                    raise PasajeroDuplicadoException(pasajero.numero_documento)
 
             # Guardar datos antiguos para el evento
             old_data = {
                 "id": db_pasajero.id,
-                "nombre": db_pasajero.nombre,
-                "apellido": db_pasajero.apellido,
-                "numero_pasaporte": db_pasajero.numero_pasaporte,
-                "email": db_pasajero.email
+                "tipo_documento": db_pasajero.tipo_documento,
+                "numero_documento": db_pasajero.numero_documento,
+                "nacionalidad": db_pasajero.nacionalidad,
+                "usuario_id": db_pasajero.usuario_id
             }
 
             # Actualizar campos
@@ -112,10 +120,10 @@ class PasajeroService:
                     "id": db_pasajero.id,
                     "old_data": old_data,
                     "new_data": {
-                        "nombre": db_pasajero.nombre,
-                        "apellido": db_pasajero.apellido,
-                        "numero_pasaporte": db_pasajero.numero_pasaporte,
-                        "email": db_pasajero.email
+                        "tipo_documento": db_pasajero.tipo_documento,
+                        "numero_documento": db_pasajero.numero_documento,
+                        "nacionalidad": db_pasajero.nacionalidad,
+                        "usuario_id": db_pasajero.usuario_id
                     }
                 }
             )
@@ -135,10 +143,10 @@ class PasajeroService:
             # Guardar datos para el evento
             pasajero_data = {
                 "id": db_pasajero.id,
-                "nombre": db_pasajero.nombre,
-                "apellido": db_pasajero.apellido,
-                "numero_pasaporte": db_pasajero.numero_pasaporte,
-                "email": db_pasajero.email
+                "tipo_documento": db_pasajero.tipo_documento,
+                "numero_documento": db_pasajero.numero_documento,
+                "nacionalidad": db_pasajero.nacionalidad,
+                "usuario_id": db_pasajero.usuario_id
             }
             
             db.delete(db_pasajero)

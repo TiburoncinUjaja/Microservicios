@@ -5,8 +5,24 @@ global:
 scrape_configs:
   - job_name: 'pasajeros-service'
     static_configs:
-      - targets: ['pasajeros-service:8000']
+      - targets: ['pasajeros-service:8001']
 
   - job_name: 'reservas-service'
     static_configs:
-      - targets: ['reservas-service:8000'] 
+      - targets: ['reservas-service:8002']
+
+  - job_name: 'vuelos-service'
+    static_configs:
+      - targets: ['vuelos-service:8003']
+
+  - job_name: 'aviones-service'
+    static_configs:
+      - targets: ['aviones-service:8004']
+
+  - job_name: 'aeropuertos-service'
+    static_configs:
+      - targets: ['aeropuertos-service:8005']
+
+  - job_name: 'escalas-service'
+    static_configs:
+      - targets: ['escalas-service:8006'] 

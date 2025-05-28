@@ -1,12 +1,14 @@
-from contextlib import asynccontextmanager
-from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
-from .api.endpoints import reservas
-from .core.config import settings
-from .core.database import Base, engine
 import logging
-import time
 import sys
+from fastapi import FastAPI, Request
+from fastapi.responses import JSONResponse
+from fastapi.middleware.cors import CORSMiddleware
+from contextlib import asynccontextmanager
+import traceback
+
+from app.api.v1.endpoints import reservas
+from app.core.config import settings
+from app.database import Base, engine, init_db
 
 # Configurar logging
 logging.basicConfig(
@@ -14,64 +16,62 @@ logging.basicConfig(
     format=settings.LOG_FORMAT,
     stream=sys.stdout
 )
-logger = logging.getLogger("reservas_service")
+logger = logging.getLogger(__name__)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Startup
-    logger.info(f"Iniciando {settings.APP_NAME} v{settings.VERSION}")
-    logger.info(f"Modo debug: {settings.DEBUG}")
-    logger.info(f"Base de datos: {settings.DATABASE_URL}")
-    
-    # Esperar a que la base de datos esté lista
-    max_retries = 5
-    retry_count = 0
-    while retry_count < max_retries:
-        try:
-            logger.info("Intentando crear tablas en la base de datos...")
-            Base.metadata.create_all(bind=engine)
-            logger.info("Tablas creadas correctamente en la base de datos")
-            break
-        except Exception as e:
-            retry_count += 1
-            logger.error(f"Error al crear tablas (intento {retry_count}/{max_retries}): {str(e)}")
-            if retry_count < max_retries:
-                logger.info(f"Esperando 5 segundos antes de reintentar...")
-                time.sleep(5)
-            else:
-                logger.error("No se pudieron crear las tablas después de varios intentos")
-                raise
-    
-    logger.info(f"Servicio {settings.APP_NAME} iniciado correctamente")
-    yield
-    # Shutdown
-    logger.info(f"Deteniendo {settings.APP_NAME}")
+    # Inicializar la base de datos al iniciar la aplicación
+    try:
+        logger.info("Iniciando la aplicación...")
+        init_db()
+        logger.info("Base de datos inicializada correctamente")
+        yield
+    except Exception as e:
+        logger.error(f"Error al inicializar la aplicación: {str(e)}")
+        logger.error(traceback.format_exc())
+        raise
 
-# Crear la aplicación FastAPI
 app = FastAPI(
-    title=settings.APP_NAME,
+    title=settings.PROJECT_NAME,
     version=settings.VERSION,
-    docs_url=f"{settings.API_PREFIX}/docs",
-    redoc_url=f"{settings.API_PREFIX}/redoc",
-    openapi_url=f"{settings.API_PREFIX}/openapi.json",
     lifespan=lifespan
 )
 
 # Configurar CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.CORS_ORIGINS,
-    allow_credentials=settings.CORS_CREDENTIALS,
-    allow_methods=settings.CORS_METHODS,
-    allow_headers=settings.CORS_HEADERS,
+    allow_origins=settings.BACKEND_CORS_ORIGINS,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
-# Incluir routers
-app.include_router(reservas.router, prefix=settings.API_PREFIX)
+# Middleware para logging de requests y responses
+@app.middleware("http")
+async def log_requests(request: Request, call_next):
+    logger.info(f"Request: {request.method} {request.url}")
+    try:
+        response = await call_next(request)
+        logger.info(f"Response: {response.status_code}")
+        return response
+    except Exception as e:
+        logger.error(f"Error en la request: {str(e)}")
+        logger.error(traceback.format_exc())
+        return JSONResponse(
+            status_code=500,
+            content={"detail": "Internal server error"}
+        )
 
-@app.get("/")
-async def root():
-    return {"message": "Bienvenido al Servicio de Reservas"}
+# Incluir routers
+app.include_router(
+    reservas.router,
+    prefix=f"{settings.API_V1_STR}/reservas",
+    tags=["reservas"]
+)
+
+@app.get("/health")
+async def health_check():
+    return {"status": "healthy"}
 
 if __name__ == "__main__":
     import uvicorn

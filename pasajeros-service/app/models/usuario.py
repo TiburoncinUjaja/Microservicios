@@ -1,5 +1,6 @@
 from sqlalchemy import Column, Integer, String, Boolean, DateTime, Enum
 from sqlalchemy.sql import func
+from sqlalchemy.orm import relationship
 from ..core.database import Base
 from ..core.security import Role
 
@@ -14,4 +15,7 @@ class Usuario(Base):
     rol = Column(Enum('admin', 'usuario', name='rol_enum'), nullable=False, default='usuario')
     fecha_creacion = Column(DateTime(timezone=True), server_default=func.now())
     fecha_actualizacion = Column(DateTime(timezone=True), onupdate=func.now())
-    activo = Column(Boolean, default=True) 
+    activo = Column(Boolean, default=True)
+
+    # Relación con Pasajero
+    pasajero = relationship("Pasajero", back_populates="usuario", uselist=False) 

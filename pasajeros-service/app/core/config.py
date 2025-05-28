@@ -19,7 +19,7 @@ class Settings(BaseSettings):
     SERVICE_PORT: int = int(os.getenv("SERVICE_PORT", "8001"))
     
     # Configuración de la base de datos
-    DATABASE_URL: str = os.getenv("DATABASE_URL", "mysql://root:root@mysql:3306/airline_pasajeros")
+    DATABASE_URL: str = os.getenv("DATABASE_URL", "mysql://root:1092@mysql:3306/airline_pasajeros")
     
     # Configuración de Redis
     REDIS_URL: str = os.getenv("REDIS_URL", "redis://redis:6379/0")

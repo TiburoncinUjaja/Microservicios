@@ -1,0 +1,12 @@
+CREATE TABLE IF NOT EXISTS aviones (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    matricula VARCHAR(10) UNIQUE NOT NULL,
+    modelo VARCHAR(50) NOT NULL,
+    capacidad_pasajeros INT NOT NULL,
+    capacidad_carga INT NOT NULL,
+    estado ENUM('ACTIVO', 'MANTENIMIENTO', 'INACTIVO') NOT NULL DEFAULT 'ACTIVO',
+    ultima_revision DATETIME,
+    proxima_revision DATETIME,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+); 

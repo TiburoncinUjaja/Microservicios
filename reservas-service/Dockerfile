@@ -6,6 +6,7 @@ WORKDIR /app
 
 # Instalar dependencias del sistema
 RUN apt-get update && apt-get install -y \
+    gcc \
     default-libmysqlclient-dev \
     build-essential \
     pkg-config \
@@ -33,11 +34,17 @@ ENV PYTHONUNBUFFERED=1 \
     DEBUG="true" \
     LOG_LEVEL="INFO" \
     LOG_FORMAT="%(asctime)s - %(name)s - %(levelname)s - %(message)s" \
-    DATABASE_URL="mysql://root:root@mysql:3306/airline_reservas" \
-    REDIS_URL="redis://redis:6379/0" \
-    RABBITMQ_URL="amqp://guest:guest@rabbitmq:5672/" \
-    PASAJEROS_SERVICE_URL="http://pasajeros-service:8001" \
-    VUELOS_SERVICE_URL="http://vuelos-service:8003" \
+    MYSQL_HOST="mysql" \
+    MYSQL_PORT="3307" \
+    MYSQL_USER="root" \
+    MYSQL_PASSWORD="1092" \
+    MYSQL_DATABASE="airline_reservas" \
+    REDIS_HOST="redis" \
+    REDIS_PORT="6379" \
+    RABBITMQ_HOST="rabbitmq" \
+    RABBITMQ_PORT="5672" \
+    RABBITMQ_USER="guest" \
+    RABBITMQ_PASSWORD="guest" \
     SERVICE_PORT="8002" \
     SERVICE_HOST="0.0.0.0" \
     SECRET_KEY="tu_clave_secreta_muy_segura" \
@@ -49,4 +56,4 @@ COPY wait-for-it.sh /wait-for-it.sh
 RUN chmod +x /wait-for-it.sh
 
 # Comando para ejecutar la aplicación
-CMD ["/wait-for-it.sh", "mysql:3306", "--", "python", "-m", "app.main"] 
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8002"] 

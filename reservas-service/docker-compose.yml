@@ -4,36 +4,85 @@ services:
   reservas-service:
     build: .
     ports:
-      - "8000:8000"
+      - "8002:8002"
     environment:
-      - DB_HOST=db
-      - DB_PORT=3306
-      - DB_USER=root
-      - DB_PASSWORD=root
-      - DB_NAME=reservas_db
-      - VUELOS_SERVICE_URL=http://vuelos-service:8000/api/v1
-      - SECRET_KEY=your-secret-key-here
-      - DEBUG=True
+      - MYSQL_HOST=mysql
+      - MYSQL_PORT=3306
+      - MYSQL_USER=root
+      - MYSQL_PASSWORD=1092
+      - MYSQL_DATABASE=airline_reservas
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - RABBITMQ_HOST=rabbitmq
+      - RABBITMQ_PORT=5672
+      - SERVICE_PORT=8002
+      - SERVICE_HOST=0.0.0.0
+      - DEBUG=true
+      - LOG_LEVEL=DEBUG
     depends_on:
-      - db
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    command: >
+      sh -c "while ! nc -z mysql 3306; do
+        echo 'Waiting for MySQL to be ready...'
+        sleep 1
+      done
+      && python -m app.main"
     networks:
       - airline-network
 
-  db:
+  mysql:
     image: mysql:8.0
     environment:
-      - MYSQL_ROOT_PASSWORD=root
-      - MYSQL_DATABASE=reservas_db
+      - MYSQL_ROOT_PASSWORD=1092
+      - MYSQL_DATABASE=airline_reservas
     ports:
-      - "3306:3306"
+      - "3307:3306"
     volumes:
-      - mysql-data:/var/lib/mysql
+      - mysql_data:/var/lib/mysql
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+    command: --default-authentication-plugin=mysql_native_password
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p1092"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
     networks:
       - airline-network
+
+  redis:
+    image: redis:6.2-alpine
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - airline-network
+
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "check_port_connectivity"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - airline-network
+
+volumes:
+  mysql_data:
 
 networks:
   airline-network:
     external: true
-
-volumes:
-  mysql-data: 

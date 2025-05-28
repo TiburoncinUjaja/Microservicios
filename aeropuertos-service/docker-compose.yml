@@ -1,0 +1,57 @@
+version: '3.8'
+
+services:
+  aeropuertos-service:
+    build: .
+    ports:
+      - "8005:8005"
+    environment:
+      - MYSQL_HOST=mysql
+      - MYSQL_PORT=3307
+      - MYSQL_USER=root
+      - MYSQL_PASSWORD=1092
+      - MYSQL_DATABASE=aeropuertos_db
+    depends_on:
+      mysql:
+        condition: service_healthy
+    networks:
+      - airline-network
+    command: >
+      /bin/sh -c "
+      echo 'Waiting for MySQL to be ready...' &&
+      while ! nc -z mysql 3307; do
+        sleep 1
+      done &&
+      echo 'MySQL is ready!' &&
+      sleep 5 &&
+      python -m app.main
+      "
+
+  mysql:
+    image: mysql:8.0
+    environment:
+      - MYSQL_ROOT_PASSWORD=1092
+      - MYSQL_DATABASE=aeropuertos_db
+      - MYSQL_USER=root
+      - MYSQL_PASSWORD=1092
+    ports:
+      - "3307:3306"
+    volumes:
+      - mysql-data:/var/lib/mysql
+      - ./mysql-init:/docker-entrypoint-initdb.d
+    networks:
+      - airline-network
+    command: --default-authentication-plugin=mysql_native_password
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p1092"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 10s
+
+volumes:
+  mysql-data:
+
+networks:
+  airline-network:
+    external: true 

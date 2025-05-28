@@ -16,3 +16,6 @@ __pycache__/
 
 # Local development
 .DS_Store 
+
+# Ignorar datos de MySQL
+mysql-data/
